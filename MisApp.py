@@ -1,5 +1,7 @@
 # Using matrix notation for the board, forget the chess notation
 
+from termcolor import colored
+
 class MisApp:
     def __init__(self, interface):
         self.walls = {}  # Walls will be a dictionary of walls
@@ -65,7 +67,6 @@ class MisApp:
     def _legal_slides(self,pos):
         possible_slides = [ (pos[0]-1,pos[1]-1), (pos[0]-1,pos[1]+1), (pos[0]+1,pos[1]-1), (pos[0]+1,pos[1]+1)] 
         return 1
-            
 
 
 class TextInterface:
@@ -86,36 +87,48 @@ class TextInterface:
             %(player2.get_walls(), player2.get_cwalls())
         
     def set_board(self,player1,player2,walls):
-
+        p1pos = player1.get_position()
+        p2pos = player2.get_position()
+        
         for row in range(1,18):
-
-            # Print first character of each line
-            if row % 2 == 1: mark = "-"
-            else: mark = "|"
-            linestr = mark
-
+            linestr = "|"
+            if row == 1 or row == 17: linestr = "-"
             for col in range(1,9):
-                if row % 2 == 1:
-                    
-                    
-                    
-                    cellmark =  "---"
-
-
-                    
-                else: 
-                    cellmark = "   "
-                    
-                linestr += cellmark
-                linestr += mark
+                linestr += self._get_cellstr(row,col,(p1pos,p2pos),walls)
             print linestr.center(self.textwidth)
 
+    def _get_cellstr(self,row,col,pos,walls):
+        cellstr = '   '
+        cell_end_mark = ' '
+        # Draw walls
+        if (row/2,col,'b') in walls and row%2==1:
+            cellstr = '---'
+        elif (row/2,col,'r') in walls:
+            cell_end_mark = '|'
+            
+
+
+        # Draw players
+        if row%2 == 0 and (row/2,col) in pos:
+            if pos.index((row/2,col)): cellstr = ' B '
+            else: cellstr = ' A '
+
+        # Handle top/bottom lines
+        if row==1 or row == 17: 
+            cellstr = '----'
+            return cellstr
+
+        # Handle left'right lines
+        if col == 8: cellstr += '|'
+        else: cellstr += cell_end_mark
 
         
-    def _print_straight_line(self):
-        print "-----------------------------"
-        print "|   |   |   |   |   |   |   |"
-        print "-----------------------------"
+        return cellstr
+
+
+
+    def _get_wallcolor(self,wallind):
+        print 'need color'
 
     def get_move(self):
         print "get move"

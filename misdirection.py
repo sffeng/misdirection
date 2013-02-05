@@ -2,9 +2,9 @@ import MisApp
 
 def main():
 
-    p1 = MisApp.Player((1,1))
+    p1 = MisApp.Player((4,3))
     p2 = MisApp.Player((8,8))
-    walls = {}
+    walls = {(1,1,'b'):0}
     
     print "******************* Testing text interface... **************"
     inter = MisApp.TextInterface()
