@@ -3,78 +3,102 @@
 from termcolor import colored
 
 class MisApp:
-    def __init__(self, interface):
+    def __init__(self, gui):
         self.walls = {}  # Walls will be a dictionary of walls
-        self.player1 = Player((1,1))
-        self.player2 = Player((8,8))
-        self.interface = interface
-        self.current_player = self.player1  # starts as first player's move
-        self.current_player_num = 1  # I need to do this better
+        self.players = [Player((1,1)), Player((8,8))]  # 2 players
+        self.gui = gui  # omg gui
+        self.turn = 0  # Whose turn?
         
     def run(self):
         while not self.game_over():
             self.play_move()
-        self.interface.close()
+        self.gui.close()
     
     def play_move(self):
 
         # Collect and process a legal move
-        self.interface.prompt_player(self.current_player_num)
-        move = self.interface.get_move()
-        while not is_legal_move(move):
-            move = self.interface.get_move()
+        self.gui.prompt_player(self.turn)
+        move = self.gui.get_move()
+        while not self.is_legal_move(move):
+            move = self.gui.get_move()
+
+        # Process and update gui
         self.process_move(move)
+        self.gui.set_board(self.players,self.walls)
+        self.turn = (self.turn + 1) % 2 
 
-        self.current_player_num = self.current_player_num % 2 + 1
+
+    def process_move(self,move):  # Update game for a legal move
         
-        if self.current_player_num == 1:
-            self.current_player = self.player1
-        else:
-            self.current_player = self.player2
-
-
-    def process_move(self,move):  # Update game and interface
-        
-        if move[0] == 0:  # slide piece to move[1]
-            self.current_player.set_position(move[1])
+        if length(move) == 2:  # slide
+            self.players[self.turn].set_position(move)
             
-        elif move[0] == 1:  # place wall at move[1]
-            self.walls[move[1]] = 0
+        elif length(move) == 3:  # wall move
             
-        elif move[0] == 2:  # place colored wall at move[1]
-            self.walls[move[1]] = self.current_player_num
-            
-        elif move[0] == 3:  # del (colored) wall at move[1], place at move[2]
-            del self.walls[move[1]]
-            self.walls[move[2]] = 0
-
+            if move in self.walls:  # remove wall, then get another placement
+                
+                del self.walls[move]
+                self.gui.set_board(self.players,self.walls)
+                
+                wallmove = self.gui.get_move()
+                while self._is_legal_wall(wallmove) != 2: 
+                    wallmove = self.gui.get_move()
+                self.process_move(wallmove) # A little recursion
+                
+            else:  # straight up wall palcement
+                
+                walltype = self.gui.get_walltype()
+                while not self._is_legal_walltype(walltype):
+                    walltype = self.gui.get_walltype()
+                
+                self.walls[move] = walltype  # finally add the wall
         else:
             print "OMG Something wrong, should not be here!!"
 
-        #  update the interface with new board, player status
-        self.interface.set_board(self.player1,self.player2,self.walls)
-        self.interface.set_game(self.player1,self.player2)
+
+    def _is_legal_walltype(self,walltype):
 
 
     def game_over(self): 
         return self.player1.get_position == (8,8) or \
             self.player2.get_position == (1,1)
-# add stalemate or cannot move loss            
+    # add stalemate or cannot move loss            
         
     def is_legal_move(self,move):
 
-
-        if length(move) == 2 and move in self._legal_slides()
+        if length(move) == 2 and move in self._legal_slides():
+            print "Moving to the space", move
             return 1
         elif length(move) == 3:
-            return
+            return self._is_legal_wall(move)
+        else:
+            print "Error: Didn't input correct type of move, try again!"
+            return 0
             
-                               
-        
-        return 1  # for now everything is legal
-
     def _is_legal_wall(self,move):
-        return 1
+
+        # Test if wall location is empty and if have walls
+        if move in self.walls:
+            if self.walls[move] == self.current_player_num:
+                print "Move OK: you are opening a wall (or door)"
+                return 1
+            elif self.walls[move] == 0:
+                print "Error: You cannot move neutral walls!"
+                return 0
+            else:
+                print "Error: wall at location"
+                return 0
+
+        # Test if player has enough walls (already considered 0 walls and 
+        # moving a door
+        elif self.current_player.get_total_walls() <= 0:
+            print "You have no more walls to place!"
+            return 0
+        
+        # Everything passed, it is an ok move
+        print "Move OK: Placing a wall at", move
+        return 2
+            
         
     def _legal_slides(self):
 
@@ -119,7 +143,7 @@ class TextInterface:
         print "Player 2 (B): %d regular, %d colored walls".center(self.textwidth) \
             %(player2.get_walls(), player2.get_cwalls())
         
-    def set_board(self,player1,player2,walls):
+    def set_board(self,players,walls):
         p1pos = player1.get_position()
         p2pos = player2.get_position()
         
@@ -166,9 +190,20 @@ class TextInterface:
         elif wallind == 1: return 'red'
         elif wallind == 2: return 'cyan'
         else: print "OMG wallcolor invalid!!!!!!!!!!!!"
+    
+    def get_wallmove(self):
+        print "Input new location for wall"
+        wallmove = self.interface.get_move()
+        while length(wallmove)!=3 and self._is_legal_wall(wallmove)!=2:
+            print "Invalid move, try again"
+            wallmove = self.interface.get_move()
+
 
     def get_move(self):
         print "get move"
+
+    def get_move_wall(self):
+        print "get move wall"
 
     def close(self):
         print "Game finished, goodbye!!"
@@ -199,3 +234,6 @@ class Player:
 
     def get_walls(self):
         return self.walls
+
+    def get_total_walls(self):
+        return (self.get_cwalls() + self.get_walls())
