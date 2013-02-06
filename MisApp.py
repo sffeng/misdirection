@@ -81,9 +81,9 @@ class TextInterface:
         print "Player %d's turn".center(self.textwidth,'=') % (player_number)
 
     def set_game(self, player1, player2):
-        print "Player 1: %d regular, %d colored walls".center(self.textwidth) \
+        print "Player 1 (A): %d regular, %d colored walls".center(self.textwidth) \
             %(player1.get_walls(), player1.get_cwalls())
-        print "Player 2: %d regular, %d colored walls".center(self.textwidth) \
+        print "Player 2 (B): %d regular, %d colored walls".center(self.textwidth) \
             %(player2.get_walls(), player2.get_cwalls())
         
     def set_board(self,player1,player2,walls):
@@ -95,40 +95,44 @@ class TextInterface:
             if row == 1 or row == 17: linestr = "-"
             for col in range(1,9):
                 linestr += self._get_cellstr(row,col,(p1pos,p2pos),walls)
-            print linestr.center(self.textwidth)
+            print linestr#.center(self.textwidth)
 
     def _get_cellstr(self,row,col,pos,walls):
+
         cellstr = '   '
         cell_end_mark = ' '
+        
         # Draw walls
-        if (row/2,col,'b') in walls and row%2==1:
-            cellstr = '---'
-        elif (row/2,col,'r') in walls:
-            cell_end_mark = '|'
-            
-
+        if (row/2,col,'b') in walls and row%2 == 1:
+            tmp = (row/2,col,'b')
+            cellstr = colored('===',self._get_wallcolor(walls[tmp]),attrs=['bold'])
+        elif (row/2,col,'r') in walls and row%2 == 0:
+            tmp = (row/2,col,'r')            
+            cell_end_mark = colored('I', self._get_wallcolor(walls[tmp]),attrs=['bold'])
 
         # Draw players
         if row%2 == 0 and (row/2,col) in pos:
-            if pos.index((row/2,col)): cellstr = ' B '
-            else: cellstr = ' A '
+            if pos.index((row/2,col)): cellstr = colored(' B ','cyan',attrs=['bold'])
+            else: cellstr = colored(' A ','red',attrs=['bold'])
 
         # Handle top/bottom lines
         if row==1 or row == 17: 
             cellstr = '----'
             return cellstr
 
-        # Handle left'right lines
+        # Boundaries of cells
         if col == 8: cellstr += '|'
-        else: cellstr += cell_end_mark
+        elif row%2 == 0: cellstr += cell_end_mark
+        else: cellstr += '-'
 
-        
         return cellstr
 
 
-
     def _get_wallcolor(self,wallind):
-        print 'need color'
+        if wallind == 0: return 'grey'
+        elif wallind == 1: return 'red'
+        elif wallind == 2: return 'cyan'
+        else: print "OMG wallcolor invalid!!!!!!!!!!!!"
 
     def get_move(self):
         print "get move"
