@@ -12,7 +12,7 @@ class MisApp:
         self.current_player_num = 1  # I need to do this better
         
     def run(self):
-        while self.game_over():
+        while not self.game_over():
             self.play_move()
         self.interface.close()
     
@@ -62,11 +62,44 @@ class MisApp:
 # add stalemate or cannot move loss            
         
     def is_legal_move(self,move):
-        return 1  # for now everything is legal
+
+
+        if length(move) == 2 and move in self._legal_slides()
+            return 1
+        elif length(move) == 3:
+            return
+            
+                               
         
-    def _legal_slides(self,pos):
-        possible_slides = [ (pos[0]-1,pos[1]-1), (pos[0]-1,pos[1]+1), (pos[0]+1,pos[1]-1), (pos[0]+1,pos[1]+1)] 
+        return 1  # for now everything is legal
+
+    def _is_legal_wall(self,move):
         return 1
+        
+    def _legal_slides(self):
+
+        pos = self.current_player.get_position()
+        
+        possible_slides = [ (pos[0]-1,pos[1]), (pos[0]+1,pos[1]), \
+                                (pos[0],pos[1]-1), (pos[0],pos[1]+1)]
+        wall_blocks = []
+        # consider walls
+        for (x,y,c) in self.walls:
+            if (x,y) == pos and c == 'r':
+                wall_blocks.append( (x,y+1) )
+            elif (x,y) == pos and c == 'b':
+                wall_blocks.append( (x+1,y) )
+            elif (x,y+1) == pos and c == 'r':
+                wall_blocks.append( (x,y) )
+            elif (x+1,y) == pos and c == 'b':
+                wall_blocks.append( (x,y) )
+        possible_slides = [p for p in possible_slides if not p in wall_blocks]
+                
+        # consider boundary
+        possible_slides = [p for p in possible_slides \
+                               if  ( (1 <= p[0] <= 8) and (1 <= p[1] <= 8) )]
+        return possible_slides
+            
 
 
 class TextInterface:
