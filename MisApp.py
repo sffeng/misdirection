@@ -10,100 +10,92 @@ class MisApp:
         self.turn = 0  # Whose turn?
         
     def run(self):
+        self.gui.update(self)
         while not self.game_over():
             self.play_move()
         self.gui.close()
     
+    def game_over(self): 
+        if self.players[0].get_position() == (8,8) \
+                or self.players[0].get_position() == (1,1):
+            return 1
+        else: return 0
+          
     def play_move(self):
 
         # Collect and process a legal move
         self.gui.prompt_player(self.turn)
         move = self.gui.get_move()
-        while not self.is_legal_move(move):
+        while not self._is_legal_move(move):
             move = self.gui.get_move()
 
         # Process and update gui
         self.process_move(move)
-        self.gui.set_board(self.players,self.walls)
-        self.turn = (self.turn + 1) % 2 
+        self.turn = (self.turn + 1) % 2         
+        self.gui.update(self)
 
 
     def process_move(self,move):  # Update game for a legal move
         
-        if length(move) == 2:  # slide
+        if len(move) == 2:  # slide
             self.players[self.turn].set_position(move)
             
-        elif length(move) == 3:  # wall move
+        elif len(move) == 3 and move in self.walls:  # remove & get wall place
+            del self.walls[move]
+            self.gui.update(self)
             
-            if move in self.walls:  # remove wall, then get another placement
-                
-                del self.walls[move]
-                self.gui.set_board(self.players,self.walls)
-                
+            wallmove = self.gui.get_move()
+            while self._is_legal_wall(wallmove) != 2: 
                 wallmove = self.gui.get_move()
-                while self._is_legal_wall(wallmove) != 2: 
-                    wallmove = self.gui.get_move()
-                self.process_move(wallmove) # A little recursion
+            self.process_move(wallmove) # A little recursion
                 
-            else:  # straight up wall palcement
-                
+        elif len(move) == 3 and move not in self.walls:  # place wall
+            walltype = self.gui.get_walltype()
+            while not self._is_legal_walltype(walltype):
                 walltype = self.gui.get_walltype()
-                while not self._is_legal_walltype(walltype):
-                    walltype = self.gui.get_walltype()
-                
-                self.walls[move] = walltype  # finally add the wall
+            self.walls[move] = walltype  # finally add the wall
         else:
             print "OMG Something wrong, should not be here!!"
 
-
     def _is_legal_walltype(self,walltype):
+        if walltype == 2 and self.players[self.turn].get_walls() > 0:
+            return True
+        elif walltype == self.turn and \
+                self.players[self.turn].get_cwalls() > 0:
+            return True
+        else: 
+            return False
 
-
-    def game_over(self): 
-        return self.player1.get_position == (8,8) or \
-            self.player2.get_position == (1,1)
-    # add stalemate or cannot move loss            
-        
-    def is_legal_move(self,move):
-
-        if length(move) == 2 and move in self._legal_slides():
-            print "Moving to the space", move
+    def _is_legal_move(self,move):
+        if len(move) == 2 and move in self._legal_slides():
             return 1
-        elif length(move) == 3:
-            return self._is_legal_wall(move)
+        elif len(move) == 3 and self._is_legal_wall(move):
+            return self._is_safe_wall(move)
         else:
-            print "Error: Didn't input correct type of move, try again!"
             return 0
-            
-    def _is_legal_wall(self,move):
 
+    def _is_safe_wall(self,move):
+        ########################## NEED TO FINISH ###########
+        return 1
+
+    def _is_legal_wall(self,move):
         # Test if wall location is empty and if have walls
         if move in self.walls:
-            if self.walls[move] == self.current_player_num:
-                print "Move OK: you are opening a wall (or door)"
+            if self.walls[move] == self.turn: # opening door
                 return 1
-            elif self.walls[move] == 0:
-                print "Error: You cannot move neutral walls!"
-                return 0
             else:
-                print "Error: wall at location"
                 return 0
 
-        # Test if player has enough walls (already considered 0 walls and 
-        # moving a door
-        elif self.current_player.get_total_walls() <= 0:
-            print "You have no more walls to place!"
+        # Enough walls? (already returned 1 if opening door)
+        elif self.players[self.turn].get_total_walls() <= 0:
             return 0
-        
-        # Everything passed, it is an ok move
-        print "Move OK: Placing a wall at", move
-        return 2
-            
-        
+        else:
+            return 2
+
+
     def _legal_slides(self):
 
-        pos = self.current_player.get_position()
-        
+        pos = self.players[self.turn].get_position()
         possible_slides = [ (pos[0]-1,pos[1]), (pos[0]+1,pos[1]), \
                                 (pos[0],pos[1]-1), (pos[0],pos[1]+1)]
         wall_blocks = []
@@ -123,54 +115,54 @@ class MisApp:
         possible_slides = [p for p in possible_slides \
                                if  ( (1 <= p[0] <= 8) and (1 <= p[1] <= 8) )]
         return possible_slides
-            
+
 
 
 class TextInterface:
     def __init__(self):
-        self.textwidth = 79
+        self.textwidth = 50
         self._print_intro()
-        
+
     def _print_intro(self):
         print "Welcome to Misdirection (text interface)!! "
 
-    def prompt_player(self,player_number):
-        print "Player %d's turn".center(self.textwidth,'=') % (player_number)
+    def update(self,app):
+        # update player info
+        self._update_player_info(app.players)
+        self._update_board(app.players,app.walls)
+        return 1
 
-    def set_game(self, player1, player2):
-        print "Player 1 (A): %d regular, %d colored walls".center(self.textwidth) \
-            %(player1.get_walls(), player1.get_cwalls())
-        print "Player 2 (B): %d regular, %d colored walls".center(self.textwidth) \
-            %(player2.get_walls(), player2.get_cwalls())
-        
-    def set_board(self,players,walls):
-        p1pos = player1.get_position()
-        p2pos = player2.get_position()
+    def _update_board(self,players,walls):
+        p1pos = players[0].get_position()
+        p2pos = players[1].get_position()
         
         for row in range(1,18):
             linestr = "|"
             if row == 1 or row == 17: linestr = "-"
             for col in range(1,9):
                 linestr += self._get_cellstr(row,col,(p1pos,p2pos),walls)
-            print linestr#.center(self.textwidth)
+            print linestr
+
 
     def _get_cellstr(self,row,col,pos,walls):
 
         cellstr = '   '
-        cell_end_mark = ' '
+        end_mark = ' '
         
         # Draw walls
         if (row/2,col,'b') in walls and row%2 == 1:
             tmp = (row/2,col,'b')
-            cellstr = colored('===',self._get_wallcolor(walls[tmp]),attrs=['bold'])
+            cellstr = colored('===',self._wallcolor(walls[tmp]),attrs=['bold'])
         elif (row/2,col,'r') in walls and row%2 == 0:
             tmp = (row/2,col,'r')            
-            cell_end_mark = colored('I', self._get_wallcolor(walls[tmp]),attrs=['bold'])
+            end_mark = colored('I', self._wallcolor(walls[tmp]),attrs=['bold'])
 
         # Draw players
         if row%2 == 0 and (row/2,col) in pos:
-            if pos.index((row/2,col)): cellstr = colored(' B ','cyan',attrs=['bold'])
-            else: cellstr = colored(' A ','red',attrs=['bold'])
+            if pos.index((row/2,col)): 
+                cellstr = colored(' B ','cyan',attrs=['bold'])
+            else: 
+                cellstr = colored(' A ','red',attrs=['bold'])
 
         # Handle top/bottom lines
         if row==1 or row == 17: 
@@ -179,36 +171,39 @@ class TextInterface:
 
         # Boundaries of cells
         if col == 8: cellstr += '|'
-        elif row%2 == 0: cellstr += cell_end_mark
+        elif row%2 == 0: cellstr += end_mark
         else: cellstr += '-'
 
         return cellstr
 
-
-    def _get_wallcolor(self,wallind):
-        if wallind == 0: return 'grey'
+    def _wallcolor(self,wallind):
+        if wallind == 0: return 'cyan'
         elif wallind == 1: return 'red'
-        elif wallind == 2: return 'cyan'
-        else: print "OMG wallcolor invalid!!!!!!!!!!!!"
-    
-    def get_wallmove(self):
-        print "Input new location for wall"
-        wallmove = self.interface.get_move()
-        while length(wallmove)!=3 and self._is_legal_wall(wallmove)!=2:
-            print "Invalid move, try again"
-            wallmove = self.interface.get_move()
+        elif wallind == 2: return 'grey'
+        else: 
+            print "OMG wallcolor invalid!!!!!!!!!!!!"
+            return None
 
-
-    def get_move(self):
-        print "get move"
-
-    def get_move_wall(self):
-        print "get move wall"
-
+    def _update_player_info(self,players):
+        print "Player 1 (A): %d regular, %d colored walls"\
+            %(players[0].get_walls(), players[0].get_cwalls())
+        print "Player 2 (B): %d regular, %d colored walls"\
+            %(players[1].get_walls(), players[1].get_cwalls())
+        print
+        
     def close(self):
         print "Game finished, goodbye!!"
-        
 
+    def prompt_player(self,player_number):
+        print "Player %d's turn" % (player_number+1)
+
+    def get_move(self):
+        move = input("Enter a move with parentheses:  ")
+        return move
+
+    def get_walltype(self):
+        wall = input("Enter the type of wall to place (0,1,2)  ")
+        return wall
 
 
 class Player:
