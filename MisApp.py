@@ -17,7 +17,7 @@ class MisApp:
     
     def game_over(self): 
         if self.players[0].get_position() == (8,8) \
-                or self.players[0].get_position() == (1,1):
+                or self.players[1].get_position() == (1,1):
             return 1
         else: return 0
           
@@ -36,24 +36,31 @@ class MisApp:
 
 
     def process_move(self,move):  # Update game for a legal move
-        
+
         if len(move) == 2:  # slide
             self.players[self.turn].set_position(move)
             
         elif len(move) == 3 and move in self.walls:  # remove & get wall place
             del self.walls[move]
             self.gui.update(self)
-            
             wallmove = self.gui.get_move()
-            while self._is_legal_wall(wallmove) != 2: 
+            while self._is_legal_wall(wallmove) != 2:
+                self.gui.error_prompt('Enter a legal followup wall move')
                 wallmove = self.gui.get_move()
-            self.process_move(wallmove) # A little recursion
+                
+            self.walls[wallmove] = 2
                 
         elif len(move) == 3 and move not in self.walls:  # place wall
             walltype = self.gui.get_walltype()
             while not self._is_legal_walltype(walltype):
                 walltype = self.gui.get_walltype()
+                
             self.walls[move] = walltype  # finally add the wall
+
+            if walltype == 2:
+                self.players[self.turn].use_wall()
+            else:
+                self.players[self.turn].use_cwall()
         else:
             print "OMG Something wrong, should not be here!!"
 
@@ -67,16 +74,36 @@ class MisApp:
             return False
 
     def _is_legal_move(self,move):
-        if len(move) == 2 and move in self._legal_slides():
+        if len(move) == 2 and move in \
+                self._legal_slides(self.players[self.turn].get_position()):
             return 1
         elif len(move) == 3 and self._is_legal_wall(move):
+            if move in self.walls:
+                return 1
             return self._is_safe_wall(move)
         else:
+            self.gui.error_prompt('not legal move')
             return 0
 
     def _is_safe_wall(self,move):
-        ########################## NEED TO FINISH ###########
+
+        # temporarily add wall for path analysis
+        self.walls[move] = 2
+
+        # start with all positions
+        all_pos = [(x,y) for x in range(1,9) for y in range(1,9)]
+        act = [(1,1)]
+        while len(act) > 0:
+            p = act.pop(0)
+            all_pos.remove(p)
+            act += [p for p in self._legal_slides(p) if p in all_pos and p not in act]
+
+        del self.walls[move]  # remove wall            
+            
+        if len(all_pos) > 0:
+            return 0
         return 1
+
 
     def _is_legal_wall(self,move):
         # Test if wall location is empty and if have walls
@@ -93,9 +120,9 @@ class MisApp:
             return 2
 
 
-    def _legal_slides(self):
+    def _legal_slides(self,pos):
 
-        pos = self.players[self.turn].get_position()
+#        pos = self.players[self.turn].get_position()
         possible_slides = [ (pos[0]-1,pos[1]), (pos[0]+1,pos[1]), \
                                 (pos[0],pos[1]-1), (pos[0],pos[1]+1)]
         wall_blocks = []
@@ -116,6 +143,8 @@ class MisApp:
                                if  ( (1 <= p[0] <= 8) and (1 <= p[1] <= 8) )]
         return possible_slides
 
+    
+
 
 
 class TextInterface:
@@ -125,6 +154,12 @@ class TextInterface:
 
     def _print_intro(self):
         print "Welcome to Misdirection (text interface)!! "
+
+    def prompt(self,msg):
+        print msg
+
+    def error_prompt(self,msg):
+        print "ERROR >>", msg
 
     def update(self,app):
         # update player info
@@ -160,9 +195,9 @@ class TextInterface:
         # Draw players
         if row%2 == 0 and (row/2,col) in pos:
             if pos.index((row/2,col)): 
-                cellstr = colored(' B ','cyan',attrs=['bold'])
+                cellstr = colored(' B ','red',attrs=['bold'])
             else: 
-                cellstr = colored(' A ','red',attrs=['bold'])
+                cellstr = colored(' A ','cyan',attrs=['bold'])
 
         # Handle top/bottom lines
         if row==1 or row == 17: 
